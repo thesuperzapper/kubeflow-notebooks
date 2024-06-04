@@ -19,6 +19,7 @@ package api
 import (
 	"github.com/kubeflow/notebooks/workspaces/backend/config"
 	"github.com/kubeflow/notebooks/workspaces/backend/data"
+	"k8s.io/client-go/kubernetes"
 	"log/slog"
 	"net/http"
 
@@ -31,15 +32,17 @@ const (
 )
 
 type App struct {
-	config config.EnvConfig
-	logger *slog.Logger
-	models data.Models
+	config    config.EnvConfig
+	logger    *slog.Logger
+	models    data.Models
+	clientSet *kubernetes.Clientset
 }
 
-func NewApp(cfg config.EnvConfig, logger *slog.Logger) *App {
+func NewApp(cfg config.EnvConfig, logger *slog.Logger, clientSet *kubernetes.Clientset) *App {
 	app := &App{
-		config: cfg,
-		logger: logger,
+		config:    cfg,
+		logger:    logger,
+		clientSet: clientSet,
 	}
 	return app
 }

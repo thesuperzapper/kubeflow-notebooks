@@ -21,6 +21,9 @@ import (
 	"fmt"
 	application "github.com/kubeflow/notebooks/workspaces/backend/api"
 	"github.com/kubeflow/notebooks/workspaces/backend/config"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"log/slog"
 	"net/http"
 	"os"
@@ -34,7 +37,13 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	app := application.NewApp(cfg, logger)
+	clientSet, err := newClientSet()
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
+	app := application.NewApp(cfg, logger, clientSet)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
@@ -47,7 +56,7 @@ func main() {
 
 	logger.Info("starting server", "addr", srv.Addr)
 
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	logger.Error(err.Error())
 	os.Exit(1)
 }
@@ -66,4 +75,19 @@ func getEnvAsInt(name string, defaultVal int) int {
 		}
 	}
 	return defaultVal
+}
+
+func getRestConfig() (*restclient.Config, error) {
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	configOverrides := &clientcmd.ConfigOverrides{}
+	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+	return kubeConfig.ClientConfig()
+}
+
+func newClientSet() (*kubernetes.Clientset, error) {
+	restConfig, err := getRestConfig()
+	if err != nil {
+		return nil, err
+	}
+	return kubernetes.NewForConfig(restConfig)
 }

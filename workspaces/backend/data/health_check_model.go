@@ -16,8 +16,15 @@ limitations under the License.
 
 package data
 
+import (
+	"context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+)
+
 type SystemInfo struct {
-	Version string `json:"version"`
+	Version    string   `json:"version"`
+	Namespaces []string `json:"namespaces"`
 }
 
 type HealthCheckModel struct {
@@ -25,12 +32,22 @@ type HealthCheckModel struct {
 	SystemInfo SystemInfo `json:"system_info"`
 }
 
-func (m HealthCheckModel) HealthCheck(version string) (HealthCheckModel, error) {
+func (m HealthCheckModel) HealthCheck(version string, clientSet *kubernetes.Clientset) (HealthCheckModel, error) {
+
+	namespaceList, err := clientSet.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return HealthCheckModel{}, err
+	}
+	var namespaces []string
+	for _, namespace := range namespaceList.Items {
+		namespaces = append(namespaces, namespace.Name)
+	}
 
 	var res = HealthCheckModel{
 		Status: "available",
 		SystemInfo: SystemInfo{
-			Version: version,
+			Version:    version,
+			Namespaces: namespaces,
 		},
 	}
 
