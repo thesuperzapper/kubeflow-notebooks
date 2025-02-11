@@ -1,13 +1,21 @@
-name: UI - BFF - Build and Test
+name: Backend - Build and Test
 
-permissions: {}
+permissions:
+  contents: read
 
 on:
   push:
-    branches: [ "main", "notebooks-v2", "v*-branch" ]
+    branches:
+      - main
+      - notebooks-v2
+      - v*-branch
   pull_request:
-    paths: [ "workspaces/backend/**" ]
-    branches: [ "main", "notebooks-v2", "v*-branch" ]
+    paths:
+      - workspaces/backend/**
+    branches:
+      - main
+      - notebooks-v2
+      - v*-branch
 
 jobs:
   build:
