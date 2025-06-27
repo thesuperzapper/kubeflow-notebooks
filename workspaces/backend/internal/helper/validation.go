@@ -21,7 +21,9 @@ import (
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -91,4 +93,14 @@ func ValidateFieldIsDNS1123Label(path *field.Path, value string) field.ErrorList
 	}
 
 	return errs
+}
+
+// ValidateKubernetesAnnotations validates a map of Kubernetes annotations.
+func ValidateKubernetesAnnotations(path *field.Path, annotations map[string]string) field.ErrorList {
+	return apivalidation.ValidateAnnotations(annotations, path)
+}
+
+// ValidateKubernetesLabels validates a map of Kubernetes labels.
+func ValidateKubernetesLabels(path *field.Path, labels map[string]string) field.ErrorList {
+	return v1validation.ValidateLabels(labels, path)
 }

@@ -35,6 +35,8 @@ import (
 
 type WorkspaceCreateEnvelope Envelope[*models.WorkspaceCreate]
 
+type WorkspaceUpdateEnvelope Envelope[*models.WorkspaceUpdate]
+
 type WorkspaceListEnvelope Envelope[[]models.Workspace]
 
 type WorkspaceEnvelope Envelope[models.Workspace]
@@ -49,10 +51,10 @@ type WorkspaceEnvelope Envelope[models.Workspace]
 //	@Param			namespace		path		string				true	"Namespace of the workspace"	extensions(x-example=kubeflow-user-example-com)
 //	@Param			workspace_name	path		string				true	"Name of the workspace"			extensions(x-example=my-workspace)
 //	@Success		200				{object}	WorkspaceEnvelope	"Successful operation. Returns the requested workspace details."
-//	@Failure		400				{object}	ErrorEnvelope		"Bad Request. Invalid namespace or workspace name format."
 //	@Failure		401				{object}	ErrorEnvelope		"Unauthorized. Authentication is required."
 //	@Failure		403				{object}	ErrorEnvelope		"Forbidden. User does not have permission to access the workspace."
 //	@Failure		404				{object}	ErrorEnvelope		"Not Found. Workspace does not exist."
+//	@Failure		422				{object}	ErrorEnvelope		"Unprocessable Entity. Validation error."
 //	@Failure		500				{object}	ErrorEnvelope		"Internal server error. An unexpected error occurred on the server."
 //	@Router			/workspaces/{namespace}/{workspace_name} [get]
 func (a *App) GetWorkspaceHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -110,9 +112,9 @@ func (a *App) GetWorkspaceHandler(w http.ResponseWriter, r *http.Request, ps htt
 //	@Produce		json
 //	@Param			namespace	path		string					true	"Namespace to filter workspaces. If not provided, returns all workspaces across all namespaces."	extensions(x-example=kubeflow-user-example-com)
 //	@Success		200			{object}	WorkspaceListEnvelope	"Successful operation. Returns a list of workspaces."
-//	@Failure		400			{object}	ErrorEnvelope			"Bad Request. Invalid namespace format."
 //	@Failure		401			{object}	ErrorEnvelope			"Unauthorized. Authentication is required."
 //	@Failure		403			{object}	ErrorEnvelope			"Forbidden. User does not have permission to list workspaces."
+//	@Failure		422			{object}	ErrorEnvelope			"Unprocessable Entity. Validation error."
 //	@Failure		500			{object}	ErrorEnvelope			"Internal server error. An unexpected error occurred on the server."
 //	@Router			/workspaces [get]
 //	@Router			/workspaces/{namespace} [get]
@@ -172,12 +174,13 @@ func (a *App) GetWorkspacesHandler(w http.ResponseWriter, r *http.Request, ps ht
 //	@Param			namespace	path		string					true	"Namespace for the workspace"	extensions(x-example=kubeflow-user-example-com)
 //	@Param			body		body		WorkspaceCreateEnvelope	true	"Workspace creation configuration"
 //	@Success		201			{object}	WorkspaceEnvelope		"Workspace created successfully"
-//	@Failure		400			{object}	ErrorEnvelope			"Bad Request. Invalid request body or namespace format."
+//	@Failure		400			{object}	ErrorEnvelope			"Bad Request."
 //	@Failure		401			{object}	ErrorEnvelope			"Unauthorized. Authentication is required."
 //	@Failure		403			{object}	ErrorEnvelope			"Forbidden. User does not have permission to create workspace."
 //	@Failure		409			{object}	ErrorEnvelope			"Conflict. Workspace with the same name already exists."
 //	@Failure		413			{object}	ErrorEnvelope			"Request Entity Too Large. The request body is too large."
 //	@Failure		415			{object}	ErrorEnvelope			"Unsupported Media Type. Content-Type header is not correct."
+//	@Failure		422			{object}	ErrorEnvelope			"Unprocessable Entity. Validation error."
 //	@Failure		500			{object}	ErrorEnvelope			"Internal server error. An unexpected error occurred on the server."
 //	@Router			/workspaces/{namespace} [post]
 func (a *App) CreateWorkspaceHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -262,6 +265,118 @@ func (a *App) CreateWorkspaceHandler(w http.ResponseWriter, r *http.Request, ps 
 	a.createdResponse(w, r, responseEnvelope, location)
 }
 
+// UpdateWorkspaceHandler updates an existing workspace.
+//
+//	@Summary		Update workspace
+//	@Description	Updates an existing workspace
+//	@Tags			workspaces
+//	@Accept			json
+//	@Produce		json
+//	@Param			namespace	path		string					true	"Namespace of the workspace"	extensions(x-example=kubeflow-user-example-com)
+//	@Param			name		path		string					true	"Name of the workspace"			extensions(x-example=my-workspace)
+//	@Param			body		body		WorkspaceCreateEnvelope	true	"Workspace creation configuration"
+//	@Success		200			{object}	WorkspaceEnvelope		"Workspace updated successfully"
+//	@Failure		400			{object}	ErrorEnvelope			"Bad Request."
+//	@Failure		401			{object}	ErrorEnvelope			"Unauthorized. Authentication is required."
+//	@Failure		403			{object}	ErrorEnvelope			"Forbidden. User does not have permission to create workspace."
+//	@Failure		409			{object}	ErrorEnvelope			"Conflict. Current workspace generation is newer than provided."
+//	@Failure		422			{object}	ErrorEnvelope			"Unprocessable Entity. Validation error."
+//	@Failure		500			{object}	ErrorEnvelope			"Internal server error. An unexpected error occurred on the server."
+//	@Router			/workspaces/{namespace}/{name} [patch]
+func (a *App) UpdateWorkspaceHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	namespace := ps.ByName(NamespacePathParam)
+	workspaceName := ps.ByName(ResourceNamePathParam)
+
+	// validate path parameters
+	var valErrs field.ErrorList
+	valErrs = append(valErrs, helper.ValidateFieldIsDNS1123Subdomain(field.NewPath(NamespacePathParam), namespace)...)
+	valErrs = append(valErrs, helper.ValidateFieldIsDNS1123Subdomain(field.NewPath(ResourceNamePathParam), workspaceName)...)
+	if len(valErrs) > 0 {
+		a.failedValidationResponse(w, r, errMsgPathParamsInvalid, valErrs, nil)
+		return
+	}
+
+	//
+	// TODO: require the caller to provide the generation base that they are expecting to update.
+	//       either include the generation as a field in the request body, or a header.
+	//
+
+	//
+	// TODO: update the "get" workspace (not list) to return the current generation of the workspace.
+	//       this probably means swapping the GET for Workspace with return a WorkspaceUpdate rather than a Workspace
+	//        - it also means that we will be treating GET as only used for retrieving the current state of the workspace,
+	//          before updating it, whereas LIST is used for getting the details of all workspaces (e.g. the table view in the UI).
+	//
+
+	// validate the Content-Type header
+	if success := a.ValidateContentType(w, r, "application/json"); !success {
+		return
+	}
+
+	// decode the request body
+	bodyEnvelope := &WorkspaceUpdateEnvelope{}
+	err := a.DecodeJSON(r, bodyEnvelope)
+	if err != nil {
+		a.badRequestResponse(w, r, fmt.Errorf("error decoding request body: %w", err))
+		return
+	}
+
+	// validate the request body
+	dataPath := field.NewPath("data")
+	if bodyEnvelope.Data == nil {
+		valErrs = field.ErrorList{field.Required(dataPath, "data is required")}
+		a.failedValidationResponse(w, r, errMsgRequestBodyInvalid, valErrs, nil)
+		return
+	}
+	valErrs = bodyEnvelope.Data.Validate(dataPath)
+	if len(valErrs) > 0 {
+		a.failedValidationResponse(w, r, errMsgRequestBodyInvalid, valErrs, nil)
+		return
+	}
+
+	workspaceUpdate := bodyEnvelope.Data
+
+	// =========================== AUTH ===========================
+	authPolicies := []*auth.ResourcePolicy{
+		auth.NewResourcePolicy(
+			auth.ResourceVerbPatch,
+			&kubefloworgv1beta1.Workspace{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      workspaceName,
+				},
+			},
+		),
+	}
+	if success := a.requireAuth(w, r, authPolicies); !success {
+		return
+	}
+	// ============================================================
+
+	updatedWorkspace, err := a.repositories.Workspace.UpdateWorkspace(r.Context(), workspaceUpdate, namespace, workspaceName)
+	if err != nil {
+		//
+		// TODO: there is still a race condition once we actually try and patch/update the workspace,
+		//       unless we use optimistic locking with the generation field
+		//      (or resourceVersion, with the risk of unexpected 500 errors to the caller).
+		//
+		if errors.Is(err, repository.ErrWorkspaceGenerationConflict) {
+			a.conflictResponse(w, r, err)
+			return
+		}
+		if apierrors.IsInvalid(err) {
+			causes := helper.StatusCausesFromAPIStatus(err)
+			a.failedValidationResponse(w, r, errMsgKubernetesValidation, nil, causes)
+			return
+		}
+		a.serverErrorResponse(w, r, fmt.Errorf("error updating workspace: %w", err))
+		return
+	}
+
+	responseEnvelope := &WorkspaceUpdateEnvelope{Data: updatedWorkspace}
+	a.dataResponse(w, r, responseEnvelope)
+}
+
 // DeleteWorkspaceHandler deletes a specific workspace by namespace and name.
 //
 //	@Summary		Delete workspace
@@ -272,10 +387,10 @@ func (a *App) CreateWorkspaceHandler(w http.ResponseWriter, r *http.Request, ps 
 //	@Param			namespace		path		string			true	"Namespace of the workspace"	extensions(x-example=kubeflow-user-example-com)
 //	@Param			workspace_name	path		string			true	"Name of the workspace"			extensions(x-example=my-workspace)
 //	@Success		204				{object}	nil				"Workspace deleted successfully"
-//	@Failure		400				{object}	ErrorEnvelope	"Bad Request. Invalid namespace or workspace name format."
 //	@Failure		401				{object}	ErrorEnvelope	"Unauthorized. Authentication is required."
 //	@Failure		403				{object}	ErrorEnvelope	"Forbidden. User does not have permission to delete the workspace."
 //	@Failure		404				{object}	ErrorEnvelope	"Not Found. Workspace does not exist."
+//	@Failure		422				{object}	ErrorEnvelope	"Unprocessable Entity. Validation error."
 //	@Failure		500				{object}	ErrorEnvelope	"Internal server error. An unexpected error occurred on the server."
 //	@Router			/workspaces/{namespace}/{workspace_name} [delete]
 func (a *App) DeleteWorkspaceHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
