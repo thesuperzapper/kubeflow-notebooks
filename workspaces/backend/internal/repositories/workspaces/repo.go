@@ -206,6 +206,9 @@ func (r *WorkspaceRepository) UpdateWorkspace(ctx context.Context, workspaceUpda
 	//       make sure to raise `ErrWorkspaceGenerationConflict` which is handled by the caller
 	//       (?? does this mean we should avoid the cache when getting the current workspace)
 	//
+	//
+	// TODO: ensure we raise ErrWorkspaceNotFound if the workspace does not exist (and handle by calkler)
+	//
 	return nil, fmt.Errorf("update workspace not implemented yet")
 }
 

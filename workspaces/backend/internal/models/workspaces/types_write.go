@@ -38,11 +38,11 @@ func (w *WorkspaceCreate) Validate(prefix *field.Path) []*field.Error {
 
 	// validate the workspace name
 	namePath := prefix.Child("name")
-	errs = append(errs, helper.ValidateFieldIsDNS1123Subdomain(namePath, w.Name)...)
+	errs = append(errs, helper.ValidateWorkspaceName(namePath, w.Name)...)
 
 	// validate the workspace kind name
 	kindPath := prefix.Child("kind")
-	errs = append(errs, helper.ValidateFieldIsDNS1123Subdomain(kindPath, w.Kind)...)
+	errs = append(errs, helper.ValidateWorkspaceKindName(kindPath, w.Kind)...)
 
 	// validate pod template
 	podTemplatePath := prefix.Child("podTemplate")

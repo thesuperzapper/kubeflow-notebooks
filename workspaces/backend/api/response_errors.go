@@ -42,19 +42,52 @@ type HTTPError struct {
 }
 
 type ErrorResponse struct {
-	Code    string      `json:"code"`
-	Message string      `json:"message"`
-	Cause   *ErrorCause `json:"cause,omitempty"`
+	// Code is a string representation of the HTTP status code.
+	Code string `json:"code"`
+
+	// Message is a human-readable description of the error.
+	Message string `json:"message"`
+
+	// Cause contains additional information about the error, such as validation errors.
+	Cause *ErrorCause `json:"cause,omitempty"`
 }
 
 type ErrorCause struct {
 	ValidationErrors []ValidationError `json:"validation_errors,omitempty"`
 }
 
+type ValidationErrorOrigin string
+
+const (
+	// OriginInternal indicates the error originated from the internal application logic.
+	OriginInternal ValidationErrorOrigin = "INTERNAL"
+
+	// OriginKubernetes indicates the error originated from the Kubernetes API server.
+	OriginKubernetes ValidationErrorOrigin = "KUBERNETES"
+)
+
 type ValidationError struct {
-	Type    field.ErrorType `json:"type"`
-	Field   string          `json:"field"`
-	Message string          `json:"message"`
+	// Origin indicates where the validation error originated.
+	// If value is empty, the origin is unknown.
+	Origin ValidationErrorOrigin `json:"origin,omitempty"`
+
+	// A machine-readable description of the cause of the error.
+	// If value is empty, there is no information available.
+	Type field.ErrorType `json:"type,omitempty"`
+
+	// A human-readable description of the cause of the error.
+	// This field may be presented as-is to a reader.
+	Field string `json:"field,omitempty"`
+
+	// The field of the resource that has caused this error, as named by its JSON serialization.
+	// May include dot and postfix notation for nested attributes.
+	// Arrays are zero-indexed.
+	// Fields may appear more than once in an array of causes due to fields having multiple errors.
+	//
+	// Examples:
+	//   "name" - the field "name" on the current resource
+	//   "items[0].name" - the field "name" on the first array entry in "items"
+	Message string `json:"message,omitempty"`
 }
 
 // errorResponse writes an error response to the client.
@@ -187,6 +220,7 @@ func (a *App) failedValidationResponse(w http.ResponseWriter, r *http.Request, m
 	// convert field errors to validation errors
 	for i, err := range errs {
 		valErrs[i] = ValidationError{
+			Origin:  OriginInternal,
 			Type:    err.Type,
 			Field:   err.Field,
 			Message: err.ErrorBody(),
@@ -196,6 +230,7 @@ func (a *App) failedValidationResponse(w http.ResponseWriter, r *http.Request, m
 	// convert k8s causes to validation errors
 	for i, cause := range k8sCauses {
 		valErrs[i+len(errs)] = ValidationError{
+			Origin:  OriginKubernetes,
 			Type:    field.ErrorType(cause.Type),
 			Field:   cause.Field,
 			Message: cause.Message,

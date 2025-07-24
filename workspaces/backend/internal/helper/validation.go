@@ -77,6 +77,21 @@ func ValidateFieldIsDNS1123Subdomain(path *field.Path, value string) field.Error
 	return errs
 }
 
+// ValidateWorkspaceName validates a field contains a valid Workspace name.
+func ValidateWorkspaceName(path *field.Path, value string) field.ErrorList {
+	return ValidateFieldIsDNS1123Subdomain(path, value)
+}
+
+// ValidateWorkspaceKindName validates a field contains a valid WorkspaceKind name.
+func ValidateWorkspaceKindName(path *field.Path, value string) field.ErrorList {
+	return ValidateFieldIsDNS1123Subdomain(path, value)
+}
+
+// ValidateKubernetesSecretName validates a field contains a valid Kubernetes Secret name.
+func ValidateKubernetesSecretName(path *field.Path, value string) field.ErrorList {
+	return ValidateFieldIsDNS1123Subdomain(path, value)
+}
+
 // ValidateFieldIsDNS1123Label validates a field contains an RCF 1123 DNS label.
 // USED FOR:
 //   - names of: Namespaces, Services, etc.
@@ -93,6 +108,16 @@ func ValidateFieldIsDNS1123Label(path *field.Path, value string) field.ErrorList
 	}
 
 	return errs
+}
+
+// ValidateKubernetesNamespaceName validates a field contains a valid Kubernetes Namespace name.
+func ValidateKubernetesNamespaceName(path *field.Path, value string) field.ErrorList {
+	return ValidateFieldIsDNS1123Label(path, value)
+}
+
+// ValidateKubernetesServicesName validates a field contains a valid Kubernetes Service name.
+func ValidateKubernetesServicesName(path *field.Path, value string) field.ErrorList {
+	return ValidateFieldIsDNS1123Label(path, value)
 }
 
 // ValidateKubernetesAnnotations validates a map of Kubernetes annotations.

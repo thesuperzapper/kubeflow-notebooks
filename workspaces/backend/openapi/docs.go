@@ -287,12 +287,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/api.WorkspaceListEnvelope"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request. Invalid namespace format.",
-                        "schema": {
-                            "$ref": "#/definitions/api.ErrorEnvelope"
-                        }
-                    },
                     "401": {
                         "description": "Unauthorized. Authentication is required.",
                         "schema": {
@@ -301,6 +295,12 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden. User does not have permission to list workspaces.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity. Validation error.",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorEnvelope"
                         }
@@ -344,12 +344,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/api.WorkspaceListEnvelope"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request. Invalid namespace format.",
-                        "schema": {
-                            "$ref": "#/definitions/api.ErrorEnvelope"
-                        }
-                    },
                     "401": {
                         "description": "Unauthorized. Authentication is required.",
                         "schema": {
@@ -358,6 +352,12 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden. User does not have permission to list workspaces.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity. Validation error.",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorEnvelope"
                         }
@@ -409,7 +409,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request. Invalid request body or namespace format.",
+                        "description": "Bad Request.",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorEnvelope"
                         }
@@ -440,6 +440,110 @@ const docTemplate = `{
                     },
                     "415": {
                         "description": "Unsupported Media Type. Content-Type header is not correct.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity. Validation error.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error. An unexpected error occurred on the server.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/workspaces/{namespace}/{name}": {
+            "patch": {
+                "description": "Updates an existing workspace",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Update workspace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "x-example": "kubeflow-user-example-com",
+                        "description": "Namespace of the workspace",
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "x-example": "my-workspace",
+                        "description": "Name of the workspace",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Workspace creation configuration",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.WorkspaceCreateEnvelope"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Workspace updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/api.WorkspaceEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized. Authentication is required.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden. User does not have permission to create workspace.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict. Current workspace generation is newer than provided.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large. The request body is too large.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type. Content-Type header is not correct.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity. Validation error.",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorEnvelope"
                         }
@@ -491,12 +595,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/api.WorkspaceEnvelope"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request. Invalid namespace or workspace name format.",
-                        "schema": {
-                            "$ref": "#/definitions/api.ErrorEnvelope"
-                        }
-                    },
                     "401": {
                         "description": "Unauthorized. Authentication is required.",
                         "schema": {
@@ -511,6 +609,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found. Workspace does not exist.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity. Validation error.",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorEnvelope"
                         }
@@ -557,12 +661,6 @@ const docTemplate = `{
                     "204": {
                         "description": "Workspace deleted successfully"
                     },
-                    "400": {
-                        "description": "Bad Request. Invalid namespace or workspace name format.",
-                        "schema": {
-                            "$ref": "#/definitions/api.ErrorEnvelope"
-                        }
-                    },
                     "401": {
                         "description": "Unauthorized. Authentication is required.",
                         "schema": {
@@ -577,6 +675,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found. Workspace does not exist.",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorEnvelope"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity. Validation error.",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorEnvelope"
                         }
@@ -615,12 +719,19 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "cause": {
-                    "$ref": "#/definitions/api.ErrorCause"
+                    "description": "Cause contains additional information about the error, such as validation errors.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/api.ErrorCause"
+                        }
+                    ]
                 },
                 "code": {
+                    "description": "Code is a string representation of the HTTP status code.",
                     "type": "string"
                 },
                 "message": {
+                    "description": "Message is a human-readable description of the error.",
                     "type": "string"
                 }
             }
@@ -640,15 +751,41 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "field": {
+                    "description": "A human-readable description of the cause of the error.\nThis field may be presented as-is to a reader.",
                     "type": "string"
                 },
                 "message": {
+                    "description": "The field of the resource that has caused this error, as named by its JSON serialization.\nMay include dot and postfix notation for nested attributes.\nArrays are zero-indexed.\nFields may appear more than once in an array of causes due to fields having multiple errors.\n\nExamples:\n  \"name\" - the field \"name\" on the current resource\n  \"items[0].name\" - the field \"name\" on the first array entry in \"items\"",
                     "type": "string"
                 },
+                "origin": {
+                    "description": "Origin indicates where the validation error originated.\nIf value is empty, the origin is unknown.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/api.ValidationErrorOrigin"
+                        }
+                    ]
+                },
                 "type": {
-                    "$ref": "#/definitions/field.ErrorType"
+                    "description": "A machine-readable description of the cause of the error.\nIf value is empty, there is no information available.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/field.ErrorType"
+                        }
+                    ]
                 }
             }
+        },
+        "api.ValidationErrorOrigin": {
+            "type": "string",
+            "enum": [
+                "INTERNAL",
+                "KUBERNETES"
+            ],
+            "x-enum-varnames": [
+                "OriginInternal",
+                "OriginKubernetes"
+            ]
         },
         "api.WorkspaceCreateEnvelope": {
             "type": "object",
