@@ -274,6 +274,7 @@ func (a *App) CreateWorkspaceHandler(w http.ResponseWriter, r *http.Request, ps 
 //	@Summary		Update workspace
 //	@Description	Updates an existing workspace
 //	@Tags			workspaces
+//	@ID				updateWorkspace
 //	@Accept			json
 //	@Produce		json
 //	@Param			namespace	path		string					true	"Namespace of the workspace"	extensions(x-example=kubeflow-user-example-com)
