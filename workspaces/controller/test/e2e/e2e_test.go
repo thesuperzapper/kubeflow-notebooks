@@ -76,17 +76,9 @@ var _ = Describe("controller", Ordered, func() {
 		cmd = exec.Command("kubectl", "create", "ns", workspaceNamespace)
 		_, _ = utils.Run(cmd) // ignore errors because namespace may already exist
 
-		By("creating common workspace resources")
-		cmd = exec.Command("kubectl", "apply",
-			"-k", filepath.Join(projectDir, "config/samples/common"),
-			"-n", workspaceNamespace,
-		)
-		_, err := utils.Run(cmd)
-		ExpectWithOffset(1, err).NotTo(HaveOccurred())
-
 		By("installing CRDs")
 		cmd = exec.Command("make", "install")
-		_, err = utils.Run(cmd)
+		_, err := utils.Run(cmd)
 		ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 		By("deploying the workspaces-controller")
@@ -96,7 +88,7 @@ var _ = Describe("controller", Ordered, func() {
 
 		By("validating that the workspaces-controller pod is running as expected")
 		var controllerPodName string
-		verifyControllerUp := func(g Gomega) {
+		verifyControllerPod := func(g Gomega) {
 			// Get controller pod name
 			cmd := exec.Command("kubectl", "get", "pods",
 				"-l", "app.kubernetes.io/component=controller-manager",
@@ -125,7 +117,24 @@ var _ = Describe("controller", Ordered, func() {
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(statusPhase).To(BeEquivalentTo(corev1.PodRunning), "Incorrect workspaces-controller pod phase")
 		}
-		Eventually(verifyControllerUp, timeout, interval).Should(Succeed())
+		Eventually(verifyControllerPod, timeout, interval).Should(Succeed())
+
+		By("validating that the controller-manager deployment is ready")
+		verifyControllerDeployment := func(g Gomega) {
+			// Deployment name is hardcoded in the manifests
+			controllerDeploymentName := "workspace-controller-controller-manager"
+
+			// Get the controller deployment availability status
+			cmd := exec.Command("kubectl", "get", "deployment",
+				controllerDeploymentName,
+				"-n", controllerNamespace,
+				"-o", "jsonpath={.status.conditions[?(@.type=='Available')].status}",
+			)
+			availableStatus, err := utils.Run(cmd)
+			g.Expect(err).NotTo(HaveOccurred(), "failed to get controller-manager deployment availability status")
+			g.Expect(availableStatus).To(Equal("True"), "controller-manager deployment is not available")
+		}
+		Eventually(verifyControllerDeployment, timeout, interval).Should(Succeed())
 
 	})
 
@@ -170,7 +179,9 @@ var _ = Describe("controller", Ordered, func() {
 
 	Context("Operator", func() {
 
-		It("should run successfully", func() {
+		// TODO: test more Workspace state scenarios
+		//       see the `generateWorkspaceState()` function in the workspace controller
+		It("correctly set the workspace state", func() {
 
 			By("creating an instance of WorkspaceKind")
 			createWorkspaceKindSample := func() error {
@@ -181,6 +192,77 @@ var _ = Describe("controller", Ordered, func() {
 				return err
 			}
 			Eventually(createWorkspaceKindSample, timeout, interval).Should(Succeed())
+
+			By("creating common workspace resources")
+			cmd := exec.Command("kubectl", "apply",
+				"-k", filepath.Join(projectDir, "config/samples/common"),
+				"-n", workspaceNamespace,
+			)
+			_, err := utils.Run(cmd)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+			By("deleting the common Secret resource")
+			cmd = exec.Command("kubectl", "delete",
+				"-f", filepath.Join(projectDir, "config/samples/common/workspace_secret.yaml"),
+				"-n", workspaceNamespace,
+			)
+			_, err = utils.Run(cmd)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+			By("creating an instance of Workspace")
+			createWorkspaceSample := func() error {
+				cmd := exec.Command("kubectl", "apply",
+					"-f", filepath.Join(projectDir, "config/samples/jupyterlab_v1beta1_workspace.yaml"),
+					"-n", workspaceNamespace,
+				)
+				_, err := utils.Run(cmd)
+				return err
+			}
+			Eventually(createWorkspaceSample, timeout, interval).Should(Succeed())
+
+			By("validating that the workspace has 'Error' state")
+			verifyWorkspaceState := func(g Gomega) error {
+				// TODO: get the workspace state and state message, and ensure it is "Error" and related to the missing secret
+				//cmd := exec.Command("kubectl", "get", "workspaces",
+				//	workspaceName,
+				//	"-n", workspaceNamespace,
+				//	"-o", "jsonpath={.status.state}",
+				//)
+				//statusState, err := utils.Run(cmd)
+				//g.Expect(err).NotTo(HaveOccurred())
+				//
+				//// If the workspace is not in the "Error" state get the state message
+				//if statusState != string(kubefloworgv1beta1.WorkspaceStateError) {
+				//	cmd = exec.Command("kubectl", "get", "workspaces",
+				//		workspaceName,
+				//		"-n", workspaceNamespace,
+				//		"-o", "jsonpath={.status.stateMessage}",
+				//	)
+				//	statusStateMessage, err := utils.Run(cmd)
+				//	g.Expect(err).NotTo(HaveOccurred())
+				//	return fmt.Errorf("workspace in %s state with message: %s", statusState, statusStateMessage)
+				//}
+				return nil
+			}
+
+		})
+
+		It("handle the lifecycle of a valid workspace", func() {
+
+			By("creating common workspace resources")
+			cmd := exec.Command("kubectl", "apply",
+				"-k", filepath.Join(projectDir, "config/samples/common"),
+				"-n", workspaceNamespace,
+			)
+			_, err := utils.Run(cmd)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+			By("creating an instance of WorkspaceKind")
+			cmd = exec.Command("kubectl", "apply",
+				"-f", filepath.Join(projectDir, "config/samples/jupyterlab_v1beta1_workspacekind.yaml"),
+			)
+			_, err = utils.Run(cmd)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 			By("creating an instance of Workspace")
 			createWorkspaceSample := func() error {

@@ -1149,6 +1149,7 @@ func (r *WorkspaceReconciler) generateWorkspaceState(ctx context.Context, log lo
 		if podPhase == corev1.PodPending {
 			state = kubefloworgv1beta1.WorkspaceStatePending
 			stateMessage = stateMsgPending
+			// TODO: return error so that we retry, also check for this error so that we still update the status to pending
 			return state, stateMessage, ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 		}
 	}
