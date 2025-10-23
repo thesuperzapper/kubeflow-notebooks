@@ -56,28 +56,24 @@ type ErrorCause struct {
 	ValidationErrors []ValidationError `json:"validation_errors,omitempty"`
 }
 
-type ValidationErrorOrigin string
+type ErrorCauseOrigin string
 
 const (
 	// OriginInternal indicates the error originated from the internal application logic.
-	OriginInternal ValidationErrorOrigin = "INTERNAL"
+	OriginInternal ErrorCauseOrigin = "INTERNAL"
 
 	// OriginKubernetes indicates the error originated from the Kubernetes API server.
-	OriginKubernetes ValidationErrorOrigin = "KUBERNETES"
+	OriginKubernetes ErrorCauseOrigin = "KUBERNETES"
 )
 
 type ValidationError struct {
 	// Origin indicates where the validation error originated.
 	// If value is empty, the origin is unknown.
-	Origin ValidationErrorOrigin `json:"origin,omitempty"`
+	Origin ErrorCauseOrigin `json:"origin,omitempty"`
 
 	// A machine-readable description of the cause of the error.
 	// If value is empty, there is no information available.
 	Type field.ErrorType `json:"type,omitempty"`
-
-	// A human-readable description of the cause of the error.
-	// This field may be presented as-is to a reader.
-	Field string `json:"field,omitempty"`
 
 	// The field of the resource that has caused this error, as named by its JSON serialization.
 	// May include dot and postfix notation for nested attributes.
@@ -87,6 +83,10 @@ type ValidationError struct {
 	// Examples:
 	//   "name" - the field "name" on the current resource
 	//   "items[0].name" - the field "name" on the first array entry in "items"
+	Field string `json:"field,omitempty"`
+
+	// A human-readable description of the cause of the error.
+	// This field may be presented as-is to a reader.
 	Message string `json:"message,omitempty"`
 }
 
