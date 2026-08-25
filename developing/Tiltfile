@@ -56,6 +56,9 @@ def object_refs(manifest, exclude_kinds=[]):
         if kind in exclude_kinds:
             continue
 
+        if kind == "Namespace":
+            continue
+
         namespace = o.get("metadata", {}).get("namespace")
         if namespace:
             refs.append("%s:%s:%s" % (name, kind.lower(), namespace))
@@ -89,14 +92,14 @@ else:
 controller_manifests = kustomize(controller_kustomize_path, kustomize_bin=kustomize_bin)
 
 # Apply manifests
-k8s_yaml(controller_manifests)
+k8s_yaml(controller_manifests, allow_duplicates=True)
 
 # Manage k8s_yaml resources
 # - Apply Tilt-specific grouping/labels
 # - Port-forward controller for local access
 k8s_resource(
     objects=object_refs(controller_manifests, exclude_kinds=["Namespace"]),
-    new_name="workspaces-controller",
+    new_name="workspaces-controller-group",
     port_forwards=[
       "8080:8080", # healthz
       "8081:8081", # metrics
@@ -155,15 +158,17 @@ for o in backend_objects:
                 "value": value,
             })
 
-k8s_yaml(encode_yaml_stream(backend_objects))
+backend_manifests_modified = encode_yaml_stream(backend_objects)
+
+k8s_yaml(backend_manifests_modified, allow_duplicates=True)
 
 # Manage k8s_yaml resources
 # - Apply Tilt-specific grouping/labels
 # - Resource dependencies on controller
 k8s_resource(
-    objects=object_refs(backend_manifests),
+    objects=object_refs(backend_manifests_modified),
     new_name="workspaces-backend",
-    resource_deps=["workspaces-controller"],
+    resource_deps=["workspaces-controller-group"],
     labels=["backend"],
 )
 
@@ -268,13 +273,14 @@ if enable_frontend:
                         container["command"] = ["npm", "run", "start:tilt"]
 
     # Apply modified manifests
-    k8s_yaml(encode_yaml_stream(frontend_objects))
+    frontend_manifests_modified = encode_yaml_stream(frontend_objects)
+    k8s_yaml(frontend_manifests_modified, allow_duplicates=True)
 
     # Manage k8s_yaml resources
     # - Apply Tilt-specific grouping/labels
     # - Resource dependencies on backend
     k8s_resource(
-        objects=object_refs(frontend_manifests),
+        objects=object_refs(frontend_manifests_modified),
         new_name="workspaces-frontend",
         resource_deps=["workspaces-backend"],
         labels=["frontend"],
@@ -290,7 +296,7 @@ if enable_frontend:
 
 istio_gateway_path = os.path.join(tilt_root, "manifests/istio-gateway")
 istio_gateway_manifest = kustomize(istio_gateway_path, kustomize_bin=kustomize_bin)
-k8s_yaml(istio_gateway_manifest)
+k8s_yaml(istio_gateway_manifest, allow_duplicates=True)
 
 # Manage k8s_yaml resources
 # - Apply Tilt-specific grouping/labels
@@ -330,7 +336,7 @@ local_resource(
 if enable_dashboard:
     dashboard_kustomize_path = os.path.join(tilt_root, "manifests/kubeflow-dashboard")
     dashboard_manifests = kustomize(dashboard_kustomize_path, kustomize_bin=kustomize_bin)
-    k8s_yaml(dashboard_manifests)
+    k8s_yaml(dashboard_manifests, allow_duplicates=True)
 
     # Manage k8s_yaml resources
     # - Apply Tilt-specific grouping/labels
@@ -401,7 +407,7 @@ if enable_prometheus:
     local_resource(
         "prometheus-ui",
         serve_cmd="kubectl port-forward -n monitoring svc/prometheus-operated 9090:9090",
-        resource_deps=["workspaces-controller"],
+        resource_deps=["workspaces-controller-group"],
         links=[link("http://localhost:9090", "Prometheus UI")],
         labels=["prometheus"],
     )
@@ -411,7 +417,7 @@ if enable_prometheus:
 # Dev Resources
 # ============================================================================
 
-dev_resources_deps = ["workspaces-controller"]
+dev_resources_deps = ["workspaces-controller-group"]
 if enable_dashboard:
     dev_resources_path = os.path.join(tilt_root, "manifests/dev-resources-dashboard")
     dev_resources_deps.append("profile-namespaces-ready")
@@ -419,7 +425,7 @@ else:
     dev_resources_path = os.path.join(tilt_root, "manifests/dev-resources-standalone")
 
 dev_resources_manifest = kustomize(dev_resources_path, kustomize_bin=kustomize_bin)
-k8s_yaml(dev_resources_manifest)
+k8s_yaml(dev_resources_manifest, allow_duplicates=True)
 
 k8s_resource(
     objects=object_refs(dev_resources_manifest),
